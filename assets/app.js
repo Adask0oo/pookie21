@@ -424,7 +424,8 @@
       '&dates=' + b.date.replace(/-/g, '') + '/' + end.replace(/-/g, '') + '&details=' + encodeURIComponent(det);
     return '<div class="muted small" style="text-align:center;margin-top:18px">Dodaj do swojego kalendarza</div><div class="btn-row" style="margin-top:8px">' +
       '<a class="btn btn--soft btn--sm" href="' + g + '" target="_blank" rel="noopener">' + ic('google-logo') + 'Google</a>' +
-      '<button class="btn btn--soft btn--sm" data-act="ics">' + ic('apple-logo') + 'iPhone / .ics</button></div>';
+      (DEMO ? '<button class="btn btn--soft btn--sm" data-act="ics">' + ic('apple-logo') + 'iPhone</button>'
+        : '<a class="btn btn--soft btn--sm" href="' + CFG.API_URL + '?a=ics&id=' + encodeURIComponent(b.id) + '">' + ic('apple-logo') + 'iPhone</a>') + '</div>';
   }
 
   function downloadIcs(c, b) {
