@@ -344,12 +344,35 @@
       rule('envelope-simple', 'Termin wybierasz <b>ty</b>, a ja go zatwierdzam. Zawsze możesz go zmienić albo odwołać.') +
       rule('sparkle', 'Niektóre talony mają <b>swoje dodatkowe zasady</b>. Przeczytasz je po otwarciu koperty.') +
       '</div></section>';
-    h += '<footer class="footer"><img src="assets/deco/gyp.svg" alt=""><div class="script">Z miłością, Adam</div><div class="small">Talony ważne bez terminu.</div></footer>';
+    h += '<footer class="footer"><img src="assets/deco/gyp.svg" alt=""><div class="script">Kocham Cię, Adam</div><div class="small">Talony ważne bez terminu.</div></footer>';
     h += '</div>';
     app.innerHTML = h + demoBar();
   }
   function rule(icon, text) { return '<div class="rule"><span class="rule__ic">' + ic(icon) + '</span><p>' + text + '</p></div>'; }
   function demoBar() { return DEMO ? '<div class="demo-bar">Podgląd · dane tylko w tej przeglądarce · PIN 0000</div>' : ''; }
+
+  /* ---------- karta powitalna (Nº 00) ---------- */
+  function renderWelcome() {
+    var L = st.letter, h = '<div class="fade-in">';
+    h += '<header class="hero"><img class="hero__img" src="assets/deco/bouquet.svg" alt="">' +
+      '<span class="eyebrow">Wszystkiego najlepszego</span>' +
+      '<div class="hero__name">Pookie</div>' +
+      '<p class="hero__sub">Dziś kończysz 21 lat, więc mam dla ciebie 21 rzeczy, które zrobimy razem.</p></header>';
+    if (L && L.paragraphs && L.paragraphs.length) {
+      h += '<section class="section"><div class="panel letter"><div class="letter__hi">' + esc(L.hi || 'Kochana Pookie,') + '</div>' +
+        L.paragraphs.map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') +
+        '<div class="letter__sign">' + esc(L.sign || 'Adam') + '</div></div></section>';
+    }
+    h += '<section class="section"><div class="section__head"><img class="divider" src="assets/deco/divider.svg" alt=""><span class="eyebrow">Zanim zaczniesz</span><h2>Jak to działa</h2></div><div class="panel rules">' +
+      rule('envelope-simple', 'Masz <b>21 kart</b>. Każda to talon na coś, co zrobimy razem. Zeskanuj kartę, a jej koperta otworzy się na stronie.') +
+      rule('calendar-heart', 'Przy każdym talonie <b>wybierasz termin</b> w kalendarzu, a ja go zatwierdzam. Zaplanowane dodasz do swojego kalendarza jednym kliknięciem.') +
+      rule('heart', 'Talony <b>od serca</b> realizujesz kiedy chcesz, nawet dziś. Mówisz mi hasło, które pokaże ci strona, a ja potwierdzam swoim PIN‑em.') +
+      rule('sparkle', 'Talony <b>na mój koszt</b> ruszają od ' + pkHuman(PK.PAID_FROM) + ', maksymalnie 2 w miesiącu. Nie musisz niczego wykorzystywać od razu, talony są ważne bez terminu.') +
+      '</div></section>';
+    h += '<div style="margin-top:28px"><a class="btn btn--block" href="#">' + ic('heart') + 'Do moich kopert</a></div>';
+    h += '<footer class="footer"><img src="assets/deco/gyp.svg" alt=""><div class="script">Kocham Cię, Adam</div></footer></div>';
+    app.innerHTML = h + demoBar();
+  }
 
   /* ---------- strona talonu ---------- */
   function firstAllowedMonth(c) {
@@ -492,7 +515,7 @@
       if (s.state === 'wait' && !(c.type === 'free' && dueToday)) {
         h += ui.pin === 'approve'
           ? pinHTML('Adam wpisuje PIN, żeby zatwierdzić termin', 'approve')
-          : '<div style="text-align:center;margin-top:14px"><button class="linkbtn" data-act="showPin" data-v="approve">' + ic('lock-simple') + 'Adam jest obok? Może zatwierdzić PIN‑em</button></div>';
+          : '<button class="btn btn--soft btn--block" style="margin-top:16px" data-act="showPin" data-v="approve">' + ic('lock-simple') + 'Adam jest obok? Zatwierdź PIN‑em</button>';
       }
       h += '<div class="btn-row" style="margin-top:18px"><button class="btn btn--ghost btn--sm" data-act="edit">' + ic('arrows-clockwise') + 'Zmień termin</button>' +
         '<button class="btn btn--ghost btn--sm" data-act="cancel">' + ic('x') + 'Odwołaj</button></div>';
@@ -613,7 +636,7 @@
       return;
     }
     var id = route();
-    if (id) renderCoupon(id); else renderHome();
+    if (id === 'start') renderWelcome(); else if (id) renderCoupon(id); else renderHome();
   }
 
   function onRoute() {
