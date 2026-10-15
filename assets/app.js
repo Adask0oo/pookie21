@@ -538,7 +538,7 @@
       h += '<div class="field"><label>' + esc(c.optionLabel) + '</label><div class="opts">' + c.options.map(function (o) {
         return '<button class="chip" data-act="opt" data-v="' + esc(o) + '" aria-pressed="' + (ui.opt === o) + '">' + esc(o) + '</button>';
       }).join('') + '</div>' +
-      (c.optionOther && ui.opt === c.optionOther ? '<input id="optInput" type="text" maxlength="60" style="margin-top:10px" placeholder="Wpisz, dokąd chcesz jechać" value="' + esc(ui.optText) + '">' : '') +
+      (c.optionOther && ui.opt === c.optionOther ? '<input id="optInput" type="text" maxlength="60" style="margin-top:10px" placeholder="' + esc(c.optionPlaceholder || 'Wpisz, dokąd chcesz jechać') + '" value="' + esc(ui.optText) + '">' : '') +
       '</div>';
     }
     if (c.mode === 'wish' || c.noteLabel) {
@@ -625,7 +625,7 @@
       if (v.length === 4) {
         var c2 = pkCoupon(route()), what = e.target.getAttribute('data-pin-act');
         var body = what === 'approve' ? { a: 'decide', coupon: c2.id, d: 'ok', pin: v }
-          : what === 'redeemNow' ? { a: 'redeem', coupon: c2.id, note: ui.note, pin: v }
+          : what === 'redeemNow' ? { a: 'redeem', coupon: c2.id, note: ui.note, option: (c2.optionOther && ui.opt === c2.optionOther ? ui.optText.trim() : ui.opt), pin: v }
           : { a: 'redeem', coupon: c2.id, pin: v };
         var msg = what === 'approve' ? 'Zatwierdzone! Widzimy się ' + pkHuman((pkCurrent(st.bookings, c2.id) || {}).date || st.today) + ' 💜' : 'Zrealizowane! 💜';
         act(body, msg, true).then(function (ok) {

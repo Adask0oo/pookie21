@@ -129,6 +129,12 @@ function pkValidate(couponId, date, bookings, today) {
 function pkId() { return 'b' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36); }
 function pkClean(s, max) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, max || 300); }
 
+function pkOptionOk(c, option) {
+  if (!c.options) return true;
+  if (option && option !== c.optionOther && c.options.indexOf(option) >= 0) return true;
+  return !!(c.optionOther && option && option !== c.optionOther);
+}
+
 function pkApply(db, a, ctx) {
   var today = ctx.today, now = ctx.now || new Date().toISOString();
   var ev = [];
@@ -155,7 +161,7 @@ function pkApply(db, a, ctx) {
     if (!v.ok) return fail(v.reason, 'rule');
     var note = pkClean(a.note), option = pkClean(a.option, 60);
     if (c.mode === 'wish' && !note) return fail('Wpisz, czego sobie życzysz.');
-    if (c.options && !((c.options.indexOf(option) >= 0 && option !== c.optionOther) || (c.optionOther && option && option !== c.optionOther))) return fail('Wybierz: ' + c.optionLabel.toLowerCase());
+    if (!pkOptionOk(c, option)) return fail('Wybierz: ' + c.optionLabel.toLowerCase());
     var cur = pkCurrent(db.bookings, c.id);
     if (cur) {
       var prevEventId = cur.eventId || '';
@@ -206,9 +212,10 @@ function pkApply(db, a, ctx) {
       bb.status = PK.STATUS.DONE; bb.date = today; bb.updated = now; bb.done = now;
       ev.push({ type: 'done', booking: bb, prevEventId: pe3, prevDate: pd3 });
     } else {
-      var n3 = pkClean(a.note);
+      var n3 = pkClean(a.note), o3 = pkClean(a.option, 60);
       if (c.mode === 'wish' && !n3) return fail('Wpisz, czego sobie życzysz.');
-      bb = { id: pkId(), coupon: c.id, status: PK.STATUS.DONE, date: today, note: n3, option: '', created: now, updated: now, done: now, eventId: '' };
+      if (!pkOptionOk(c, o3)) return fail('Wybierz: ' + c.optionLabel.toLowerCase());
+      bb = { id: pkId(), coupon: c.id, status: PK.STATUS.DONE, date: today, note: n3, option: o3, created: now, updated: now, done: now, eventId: '' };
       db.bookings.push(bb);
       ev.push({ type: 'done', booking: bb });
     }
