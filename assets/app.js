@@ -14,7 +14,7 @@
   var busy = false;
 
   function resetUi() {
-    return { calMonth: null, sel: null, opt: '', note: '', editing: false, pin: null, hint: '', hintWarn: false, wx: ui ? ui.wx : null, homeMonth: ui ? ui.homeMonth : null, filter: ui ? ui.filter : 'all', homeSel: null };
+    return { calMonth: null, sel: null, opt: '', optText: '', note: '', editing: false, pin: null, hint: '', hintWarn: false, wx: ui ? ui.wx : null, homeMonth: ui ? ui.homeMonth : null, filter: ui ? ui.filter : 'all', homeSel: null };
   }
 
   /* ---------- narzędzia ---------- */
@@ -537,15 +537,18 @@
     if (c.options) {
       h += '<div class="field"><label>' + esc(c.optionLabel) + '</label><div class="opts">' + c.options.map(function (o) {
         return '<button class="chip" data-act="opt" data-v="' + esc(o) + '" aria-pressed="' + (ui.opt === o) + '">' + esc(o) + '</button>';
-      }).join('') + '</div></div>';
+      }).join('') + '</div>' +
+      (c.optionOther && ui.opt === c.optionOther ? '<input id="optInput" type="text" maxlength="60" style="margin-top:10px" placeholder="Wpisz, dokąd chcesz jechać" value="' + esc(ui.optText) + '">' : '') +
+      '</div>';
     }
     if (c.mode === 'wish' || c.noteLabel) {
       h += '<div class="field"><label for="noteInput">' + esc(c.noteLabel || 'Coś jeszcze?') + (c.mode === 'wish' ? '' : ' <span class="muted small">(opcjonalnie)</span>') + '</label>' +
         '<textarea id="noteInput" rows="' + (c.mode === 'wish' ? 3 : 2) + '" maxlength="300" placeholder="' + (c.mode === 'wish' ? 'np. śniadanie na mieście i długi spacer' : '') + '">' + esc(ui.note) + '</textarea></div>';
     }
 
-    var ready = !!ui.sel && (!c.options || !!ui.opt) && (c.mode !== 'wish' || !!ui.note.trim());
-    if (ui.sel) h += '<div class="summary">' + ic('calendar-heart') + '<span><b>' + capital(weekday(ui.sel)) + ', ' + pkHuman(ui.sel, true) + '</b>' + (c.days > 1 ? ' – ' + pkHuman(pkAddDays(ui.sel, c.days - 1)) : '') + (ui.opt ? '<br>' + esc(ui.opt) : '') + '</span></div>';
+    var optVal = c.optionOther && ui.opt === c.optionOther ? ui.optText.trim() : ui.opt;
+    var ready = !!ui.sel && (!c.options || !!optVal) && (c.mode !== 'wish' || !!ui.note.trim());
+    if (ui.sel) h += '<div class="summary">' + ic('calendar-heart') + '<span><b>' + capital(weekday(ui.sel)) + ', ' + pkHuman(ui.sel, true) + '</b>' + (c.days > 1 ? ' – ' + pkHuman(pkAddDays(ui.sel, c.days - 1)) : '') + (optVal ? '<br><span id="optSum">' + esc(optVal) + '</span>' : '') + '</span></div>';
 
     h += '<div style="margin-top:18px;display:grid;gap:10px">';
     if (c.type === 'free' && ui.sel === st.today) {
@@ -583,14 +586,15 @@
         if (v.ok) { ui.sel = d; ui.hint = ''; ui.hintWarn = false; ui.pin = null; }
         else { ui.hint = v.reason; ui.hintWarn = true; }
         render(); break;
-      case 'opt': ui.opt = t.getAttribute('data-v'); render(); break;
+      case 'opt': ui.opt = t.getAttribute('data-v'); render(); if (c.optionOther && ui.opt === c.optionOther) { var oi = document.getElementById('optInput'); if (oi) oi.focus(); } break;
       case 'edit':
         var cb = pkCurrent(st.bookings, c.id);
-        ui.editing = true; ui.sel = null; ui.opt = (cb && cb.option) || ''; ui.note = (cb && cb.note) || ''; ui.calMonth = cb ? cb.date.slice(0, 7) : null; ui.hint = ''; render(); break;
+        ui.editing = true; ui.sel = null; ui.opt = (cb && cb.option) || ''; ui.optText = '';
+        if (c.optionOther && ui.opt && c.options.indexOf(ui.opt) < 0) { ui.optText = ui.opt; ui.opt = c.optionOther; } ui.note = (cb && cb.note) || ''; ui.calMonth = cb ? cb.date.slice(0, 7) : null; ui.hint = ''; render(); break;
       case 'stopEdit': ui.editing = false; ui.sel = null; render(); break;
       case 'showPin': ui.pin = t.getAttribute('data-v'); ui.pinErr = ''; ui.focusPin = true; render(); break;
       case 'book':
-        act({ a: 'book', coupon: c.id, date: ui.sel, note: ui.note, option: ui.opt }, ui.editing ? 'Nowy termin poleciał do Adama 💌' : 'Propozycja poleciała do Adama 💌', true)
+        act({ a: 'book', coupon: c.id, date: ui.sel, note: ui.note, option: (c.optionOther && ui.opt === c.optionOther ? ui.optText.trim() : ui.opt) }, ui.editing ? 'Nowy termin poleciał do Adama 💌' : 'Propozycja poleciała do Adama 💌', true)
           .then(function (ok) { if (ok) { var keep = ui; ui = resetUi(); ui.wx = keep.wx; render(); } });
         break;
       case 'cancel':
@@ -605,6 +609,11 @@
   });
 
   app.addEventListener('input', function (e) {
+    if (e.target.id === 'optInput') {
+      var hadO = !!ui.optText.trim(); ui.optText = e.target.value;
+      var os = document.getElementById('optSum'); if (os) os.textContent = ui.optText.trim();
+      if (hadO !== !!ui.optText.trim()) { var po = e.target.selectionStart; render(); var oi = document.getElementById('optInput'); if (oi) { oi.focus(); oi.setSelectionRange(po, po); } }
+    }
     if (e.target.id === 'noteInput') {
       var had = !!ui.note.trim(); ui.note = e.target.value;
       var c = pkCoupon(route());
@@ -671,7 +680,7 @@
   window.addEventListener('hashchange', onRoute);
   // odświeżanie stanu po powrocie do karty (np. Adam zatwierdził z maila)
   document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible' && st.loaded && !busy) api.load().then(function (s) { setState(s); if (!document.getElementById('pinInput') && !document.getElementById('noteInput')) render(); }).catch(function () {});
+    if (document.visibilityState === 'visible' && st.loaded && !busy) api.load().then(function (s) { setState(s); if (!document.getElementById('pinInput') && !document.getElementById('noteInput') && !document.getElementById('optInput')) render(); }).catch(function () {});
   });
   boot();
 })();

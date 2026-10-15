@@ -155,7 +155,7 @@ function pkApply(db, a, ctx) {
     if (!v.ok) return fail(v.reason, 'rule');
     var note = pkClean(a.note), option = pkClean(a.option, 60);
     if (c.mode === 'wish' && !note) return fail('Wpisz, czego sobie życzysz.');
-    if (c.options && c.options.indexOf(option) < 0) return fail('Wybierz: ' + c.optionLabel.toLowerCase());
+    if (c.options && !((c.options.indexOf(option) >= 0 && option !== c.optionOther) || (c.optionOther && option && option !== c.optionOther))) return fail('Wybierz: ' + c.optionLabel.toLowerCase());
     var cur = pkCurrent(db.bookings, c.id);
     if (cur) {
       var prevEventId = cur.eventId || '';
