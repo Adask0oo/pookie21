@@ -45,12 +45,20 @@ function pkCoupon(id) {
 function pkIsActive(b) { return b && (b.status === PK.STATUS.WAIT || b.status === PK.STATUS.OK || b.status === PK.STATUS.DONE); }
 function pkEndDate(b) { var c = pkCoupon(b.coupon); return pkAddDays(b.date, ((c && c.days) || 1) - 1); }
 
-/* Aktualny wpis talonu (ostatni nieodwołany i nieodrzucony) */
+/* Talon wielokrotny (np. 10 kolacji): uses > 1 */
+function pkMulti(c) { return !!(c && c.uses > 1); }
+function pkDoneList(bookings, couponId) {
+  var out = [];
+  for (var i = 0; i < bookings.length; i++) if (bookings[i].coupon === couponId && bookings[i].status === PK.STATUS.DONE) out.push(bookings[i]);
+  return out;
+}
+
+/* Aktualny wpis talonu (ostatni nieodwołany i nieodrzucony; przy wielokrotnym – bez zrealizowanych) */
 function pkCurrent(bookings, couponId) {
-  var cur = null;
+  var cur = null, multi = pkMulti(pkCoupon(couponId));
   for (var i = 0; i < bookings.length; i++) {
     var b = bookings[i];
-    if (b.coupon === couponId && pkIsActive(b)) cur = b;
+    if (b.coupon === couponId && pkIsActive(b) && !(multi && b.status === PK.STATUS.DONE)) cur = b;
   }
   return cur;
 }
@@ -67,6 +75,12 @@ function pkLastRejected(bookings, couponId) {
 /* Stan widoczny dla Pookie: dostępny | czeka | zaplanowany | zrealizowany */
 function pkCouponState(bookings, couponId, today) {
   var c = pkCoupon(couponId), b = pkCurrent(bookings, couponId);
+  if (pkMulti(c)) {
+    var done = pkDoneList(bookings, couponId), used = done.length, last = used ? done[used - 1] : null;
+    if (b) return { state: b.status === PK.STATUS.WAIT ? 'wait' : 'planned', booking: b, used: used, last: last };
+    if (used >= c.uses) return { state: 'done', booking: last, used: used, last: last };
+    return { state: 'free', booking: null, used: used, last: last };
+  }
   if (!b) return { state: 'free', booking: null };
   if (b.status === PK.STATUS.DONE) return { state: 'done', booking: b };
   if (b.status === PK.STATUS.WAIT) return { state: 'wait', booking: b };

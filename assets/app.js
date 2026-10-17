@@ -179,10 +179,14 @@
     var m = {};
     st.bookings.forEach(function (b) {
       if (!pkIsActive(b)) return;
-      var s = pkCouponState(st.bookings, b.coupon, st.today);
-      if (!s.booking || s.booking.id !== b.id) return;
-      var cls = s.state === 'wait' ? 'w' : s.state === 'done' ? 'd' : '';
-      var c = pkCoupon(b.coupon), days = (c && c.days) || 1;
+      var c = pkCoupon(b.coupon), cls;
+      if (pkMulti(c) && b.status === S.DONE) cls = 'd';
+      else {
+        var s = pkCouponState(st.bookings, b.coupon, st.today);
+        if (!s.booking || s.booking.id !== b.id) return;
+        cls = s.state === 'wait' ? 'w' : s.state === 'done' ? 'd' : '';
+      }
+      var days = (c && c.days) || 1;
       for (var i = 0; i < days; i++) {
         var d = pkAddDays(b.date, i);
         (m[d] = m[d] || []).push({ cls: cls, b: b, c: c });
@@ -269,7 +273,8 @@
     var s = pkCouponState(st.bookings, c.id, st.today);
     if (s.state === 'wait') return '<span class="pill pill--wait">' + ic('clock') + 'Czeka na Adama</span>';
     if (s.state === 'planned') return '<span class="pill pill--planned">' + ic('calendar-heart') + shortDate(s.booking.date) + '</span>';
-    if (s.state === 'done') return '<span class="pill pill--done">' + ic('check') + 'Zrealizowany</span>';
+    if (s.state === 'done') return '<span class="pill pill--done">' + ic('check') + (pkMulti(c) ? 'Wszystkie ' + c.uses + ' wykorzystane' : 'Zrealizowany') + '</span>';
+    if (pkMulti(c)) return '<span class="pill">' + (s.used ? 'Zostało ' + (c.uses - s.used) + ' z ' + c.uses : c.uses + '× do wykorzystania') + '</span>';
     return '<span class="pill">Do wykorzystania</span>';
   }
 
@@ -393,7 +398,7 @@
     if (c.type === 'free') {
       if (c.mode === 'unlimited') return 'Bez limitu i bez PIN‑u. Używaj, ile chcesz.';
       if (c.mode === 'instant') return 'Działa od ręki, bez rezerwacji. Jednorazowy, więc użyj go mądrze.';
-      return 'Możesz go wykorzystać nawet dziś. W dniu realizacji mówisz mi hasło, a ja potwierdzam PIN‑em.';
+      return (pkMulti(c) ? 'Działa ' + c.uses + ' razy. ' : '') + 'Możesz go wykorzystać nawet dziś. W dniu realizacji mówisz mi hasło, a ja potwierdzam PIN‑em.';
     }
     if (c.size === 'big') return 'Ten talon ma miesiąc tylko dla siebie. Planujemy go co najmniej 2 tygodnie wcześniej, najwcześniej od ' + pkHuman(PK.PAID_FROM) + '.';
     if (c.season) return 'Tylko od maja do września, maksymalnie 2 talony na mój koszt w miesiącu i co najmniej ' + PK.LEAD_SMALL + ' dni wcześniej.';
@@ -485,7 +490,7 @@
   }
 
   function doneHTML(c, b) {
-    return '<div class="status-card"><span class="pill pill--done">' + ic('check') + 'Zrealizowany</span>' +
+    return '<div class="status-card"><span class="pill pill--done">' + ic('check') + (pkMulti(c) ? 'Wszystkie ' + c.uses + ' wykorzystane · ostatnia' : 'Zrealizowany') + '</span>' +
       '<div class="status-card__date">' + pkHuman(b.date, true) + '</div>' +
       (b.option ? '<div class="muted">' + esc(b.option) + '</div>' : '') +
       (b.note ? '<div class="status-card__note">„' + esc(b.note) + '”</div>' : '') +
@@ -495,6 +500,7 @@
   function bookingBlock(c, s) {
     var b = s.booking, h = '';
     if (s.state === 'done') return doneHTML(c, b);
+    if (pkMulti(c) && s.used) h += '<div class="summary" style="margin:0 0 16px">' + ic('heart') + '<span>Wykorzystane <b>' + s.used + ' z ' + c.uses + '</b> · ostatnio ' + pkHuman(s.last.date) + (s.last.option ? ' (' + esc(s.last.option) + ')' : '') + '</span></div>';
 
     if ((s.state === 'wait' || s.state === 'planned') && !ui.editing) {
       var dueToday = b.date <= st.today;
